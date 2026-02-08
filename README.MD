@@ -1,14 +1,73 @@
 # 🏠 Homelab
 
-The purpose of my homelab is to be the playground for learning and experimentation. If I had to sum up it in one word : **Tinkerer**.
+> *I hear and I forget. I see and I remember. I do and I understand.* — Xunzi
 
-Most of my self-hosted applications run on Kubernetes. First, because I love the platform and second because it makes me feel responsible for the entire process of deploying and maintaining an application from A to Z. 
+My homelab is a playground for learning and experimentation.
 
-It pushes me to think critically about system design, backup strategies, security, scalability, and the overall ease of deployment and maintenance.
+I run a **hybrid setup** on top of **Proxmox**: some services live on **Kubernetes**, while others run as **VMs** or **LXC containers**, depending on what makes the most sense (simplicity, reliability, resource usage, or hardware access).
 
-# ⚙️ Components and tools
+This setup pushes me to think critically about system design, backup strategies, security, scalability, and the overall ease of deployment and maintenance.
 
-- Load Balancer (Layer 2 ARP): MetalLB
-- Networking : Cilium
-- Ingress-controller (Layer 7 HTTP): Traefik
--  GitOps : FluxCD, Github
+## ⚙️ Components and tools
+
+### Platform
+- Virtualization: **Proxmox**
+- Workloads: **Kubernetes**, **VMs**, **LXC containers**
+
+### Kubernetes (when it fits)
+- Load Balancer (L2 ARP): **MetalLB**
+- Networking: **Cilium**
+- Ingress controller (L7 HTTP): **Traefik**
+- GitOps: **FluxCD** (GitHub)
+
+### Exposure
+- Secure remote access: **Cloudflare Tunnel**
+
+## 🗺️ Architecture
+
+```mermaid
+flowchart TB
+  CF[Cloudflare Tunnel]
+
+  subgraph Proxmox[Proxmox]
+    direction TB
+
+    subgraph VM[VM]
+      direction TB
+      Postgres[Postgres]
+      HomeAssistant[HomeAssistant]
+      Minikube[Minikube]
+      HomeAssistant ~~~ Postgres ~~~ Minikube
+    end
+
+    subgraph LXC[LXC]
+      direction TB
+      FreshRSS[FreshRSS]
+      UptimeKuma[Uptime Kuma]
+      Pulse[Pulse]
+      Ollama[Ollama]
+      Sure[Sure]
+      FreshRSS ~~~ Sure ~~~ UptimeKuma ~~~ Pulse ~~~ Ollama
+    end
+
+    subgraph K8S[Cluster k8s]
+      direction TB
+      CP[k8s-controlplane]
+      W1[k8s-worker-1]
+      W2[k8s-worker-2]
+      CP --> W1
+      CP --> W2
+    end
+  end
+
+  %% External exposure (Cloudflare)
+  CF -.-> FreshRSS
+  CF -.-> UptimeKuma
+  CF -.-> Sure
+  CF -.-> HomeAssistant
+
+  %% Non-network "layout hints"
+  CF ~~~ Postgres
+  Minikube ~~~ CP
+  Sure ~~~ CP
+```
